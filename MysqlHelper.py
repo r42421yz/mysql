@@ -10,7 +10,6 @@ class MySqlHelper:
         self.password = password
         self.database = database
         self.connection  = None
-        # self.cursor = None
         self.connect()
 
     def connect(self):
