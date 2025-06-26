@@ -10,7 +10,7 @@ class MySqlHelper:
         self.password = password
         self.database = database
         self.connection  = None
-        self.cursor = None
+        # self.cursor = None
         self.connect()
 
     def connect(self):
@@ -22,7 +22,6 @@ class MySqlHelper:
                 password = self.password,
                 database = self.database,
             )
-            # self.cursor = self.connection.cursor(dictionary = True)
             print("Successfully connected to database.")
         except Error as e:
             print(f"Failed to connect to database: {e}")
@@ -114,8 +113,6 @@ class MySqlHelper:
         """
         关闭数据库连接
         """
-        if self.cursor:
-            self.cursor.close()
         if self.connection:
             self.connection.close()
         print("Disconnected to database")
@@ -134,7 +131,7 @@ if __name__ == "__main__":
     params  = ()
     print(db_helper.query_all(query, params))
 
-    db_helper.insert('students', {'name': 'Cindy', 'height':'158.00'})
+    # db_helper.insert('students', {'name': 'Cindy', 'height':'158.00'})
     # db_helper.update('students', {'name':'Bob'}, 'id=%s', (6,))
     # db_helper.delete('students', 'id=%s', (6,))
 
