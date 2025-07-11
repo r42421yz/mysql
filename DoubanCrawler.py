@@ -2,27 +2,33 @@ import requests;
 from bs4 import BeautifulSoup;
 from MysqlHelper import MySqlHelper;
 
-headers = {
-    'User-Agent' :  'Mozilla/5.0'
-}
+class DoubanMovieCrawler:
+    def __init__(self, db_helper, base_url="https://movie.douban.com/top250", headers=None):
+        self.db_helper = db_helper
+        self.base_url = base_url
+        self.headers = headers or {
+            'User-Agent': 'Mozilla/5.0'
+        }
 
+    def crawler(self):
+        for start in range(0, 100, 25):
+            url = f"{self.base_url}?start={start}"
+            response = requests.get(url, headers=self.headers)
+            if response.status_code != 200:
+                print(f"Request failed at start={start}")
+                continue
 
-db_helper = MySqlHelper(host='localhost', user='root', password='password', database='douban')
-for start in range(0, 100, 25):
+            soup = BeautifulSoup(response.content, "html.parser")
+            self.parse_and_store(soup)
 
-    url = f"https://movie.douban.com/top250?start={start}"
+    def parse_and_store(self, soup):
+        for item in soup.find_all("div", class_="info"):
+            data = self.extract_movie_data(item)
+            self.print_movie(data)
+            self.db_helper.insert('movies', data)
 
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        print(f"Request failed at start={start}")
-        continue
-
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    for item in soup.find_all("div", class_="info"):
-
+    def extract_movie_data(self, item):
         hd = item.find("div", class_="hd")
-        link = hd.find("a")["href"]
         spans = hd.find_all("span", class_="title")
         title_main = spans[0].text.strip() if spans else ""
 
@@ -42,7 +48,7 @@ for start in range(0, 100, 25):
                 actors = parts[1].strip()
 
         parts = [x.strip() for x in line2.split("/")]
-        year = parts[0]
+        year = parts[0] if len(parts) > 0 else ""
         country = parts[1] if len(parts) > 1 else ""
         genres = parts[2] if len(parts) > 2 else ""
 
@@ -56,16 +62,6 @@ for start in range(0, 100, 25):
         if vote_tag:
             votes = "".join(filter(str.isdigit, vote_tag.text.strip()))
 
-        print(f"标题：{title_main}")
-        print(f"导演：{director}")
-        print(f"主演：{actors}")
-        print(f"年份：{year}")
-        print(f"国家：{country}")
-        print(f"类型：{genres}")
-        print(f"评分：{rating}")
-        print(f"评价人数：{votes}")
-        print("-------------------------")
-
         data = {
             'title' : title_main,
             'year' : year,
@@ -76,8 +72,21 @@ for start in range(0, 100, 25):
             'director' : director,
             'actors' : actors
         }
+        return data
+    
+    def print_movie(self, data):
+        print(f"标题：{data['title']}")
+        print(f"导演：{data['director']}")
+        print(f"主演：{data['actors']}")
+        print(f"年份：{data['year']}")
+        print(f"国家：{data['country']}")
+        print(f"类型：{data['genres']}")
+        print(f"评分：{data['rating']}")
+        print(f"评价人数：{data['votes']}")
+        print("-------------------------")
 
-        db_helper.insert('movies', data)
-
-
-db_helper.close()
+if __name__ == "__main__":
+    db_helper = MySqlHelper(host='localhost', user='root', password='password', database='douban')
+    crawler = DoubanMovieCrawler(db_helper = db_helper)
+    crawler.crawler()
+    db_helper.close()
