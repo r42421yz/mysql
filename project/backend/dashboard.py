@@ -4,10 +4,13 @@ import pymysql
 from collections import Counter
 import re
 import sys
-
+from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+
 
 db = pymysql.connect(
     host='localhost',
@@ -17,6 +20,40 @@ db = pymysql.connect(
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor
 )
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    username = data['username']
+    password = data['password']
+    cursor = db.cursor()
+
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    existing_user = cursor.fetchone()
+    if existing_user:
+        return jsonify({'message': '用户已存在'}), 400
+
+    hash_pw = generate_password_hash(password)
+    insert_query = "INSERT INTO users (username, password) VALUES (%s, %s)"
+    cursor.execute(insert_query, (username, hash_pw))
+    db.commit()
+    
+    return jsonify({'message': '注册成功'})
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data['username']
+    password = data['password']
+    cursor = db.cursor()
+    
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    user_data = cursor.fetchone()
+    if user_data and check_password_hash(user_data['password'], password):
+        return jsonify({'message': '登录成功'})
+    
+    return jsonify({'message': '用户名或密码错误'}), 401
 
 @app.route('/api/chart')
 def chart_data():
@@ -70,6 +107,7 @@ def chart_data():
         return jsonify(data)
     else:
         return jsonify([])
+    
     
 def clean_name(name):
     if not name:
