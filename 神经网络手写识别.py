@@ -62,13 +62,49 @@ class neuralNetwork:
     
         return final_outputs
     
+    def fit(self, training_data_list, epochs=1, augment=False):
+        for e in range(epochs):
+            for record in training_data_list:
+                all_values = record.split(',')
+                # scale inputs to range 0.01 to 1.00
+                inputs = (np.asarray(all_values[1:], dtype=float)/255.0 * 0.99) + 0.01
+                # target output values: all 0.01, desired label 0.99
+                targets = np.zeros(output_nodes) + 0.01
+                targets[int(all_values[0])] = 0.99
+                self.train(inputs, targets)
+
+                if augment:
+                    # anticlockwise
+                    inputs_plus10_img = scipy.ndimage.rotate(inputs.reshape(28,28),10,cval=0.01, order = 1, reshape=False)
+                    self.train(inputs_plus10_img.reshape(784),targets)
+                    # clockwise
+                    inputs_plus10_img = scipy.ndimage.rotate(inputs.reshape(28,28),-10,cval=0.01, order = 1, reshape=False)
+                    self.train(inputs_plus10_img.reshape(784),targets)
+    
+    def evaluate(self, test_data_list):
+        scorecard = []
+        for record in test_data_list:
+            all_values = record.split(',')
+            correct_label = int(all_values[0])
+            inputs = (np.asarray(all_values[1:], dtype=float)/255.0 * 0.99) + 0.01
+            outputs = n.query(inputs)
+            label = np.argmax(outputs)
+            if(label == correct_label):
+                scorecard.append(1)
+            else:
+                scorecard.append(0)
+        scorecard_array = np.asarray(scorecard)
+        return (scorecard_array.sum() / scorecard_array.size)
+
+
+
+    
     
 if __name__ == "__main__":
     # inputs_nodes = 28 * 28
     input_nodes = 784
     output_nodes = 10
     hidden_nodes = 200
-
     learning_rate = 0.3
 
     n  =  neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
@@ -82,43 +118,6 @@ if __name__ == "__main__":
     testing_data_list = testing_data_file.readlines()
     testing_data_file.close()
 
-    # train the neural network
-    # go through all records in training set
-    epochs = 1
-    for e in range(epochs):
-        for record in training_data_list:
-            all_values = record.split(',')
-            # scale inputs to range 0.01 to 1.00
-            inputs = (np.asarray(all_values[1:], dtype=float)/255.0 * 0.99) + 0.01
-            # target output values: all 0.01, desired label 0.99
-            targets = np.zeros(output_nodes) + 0.01
-            targets[int(all_values[0])] = 0.99
-            n.train(inputs, targets)
-
-            # anticlockwise
-            inputs_plus10_img = scipy.ndimage.rotate(inputs.reshape(28,28),10,cval=0.01, order = 1, reshape=False)
-            n.train(inputs_plus10_img.reshape(784),targets)
-            # clockwise
-            inputs_plus10_img = scipy.ndimage.rotate(inputs.reshape(28,28),-10,cval=0.01, order = 1, reshape=False)
-            n.train(inputs_plus10_img.reshape(784),targets)
-            pass
-        pass
-
-    # test the neural network
-    scorecard = []
-    for record in testing_data_list:
-        all_values = record.split(',')
-        correct_label = int(all_values[0])
-        inputs = (np.asarray(all_values[1:], dtype=float)/255.0 * 0.99) + 0.01
-        outputs = n.query(inputs)
-        label = np.argmax(outputs)
-        if(label == correct_label):
-            scorecard.append(1)
-        else:
-            scorecard.append(0)
-            pass
-        pass
-
-
-    scorecard_array = np.asarray(scorecard)
-    print("performance = ", scorecard_array.sum() / scorecard_array.size)
+    n.fit(training_data_list, epochs=1, augment=True)
+    performance = n.evaluate(testing_data_list)
+    print("performance =", performance)
