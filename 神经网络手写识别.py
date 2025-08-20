@@ -110,11 +110,11 @@ if __name__ == "__main__":
     n  =  neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
 
     # read the file
-    training_data_file = open("data/archive/mnist_train.csv", 'r')
+    training_data_file = open("../data/archive/mnist_train.csv", 'r')
     training_data_list = training_data_file.readlines()
     training_data_file.close()
 
-    testing_data_file = open("data/archive/mnist_test.csv", 'r')
+    testing_data_file = open("../data/archive/mnist_test.csv", 'r')
     testing_data_list = testing_data_file.readlines()
     testing_data_file.close()
 
