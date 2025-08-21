@@ -5,11 +5,11 @@ from PIL import Image
 import numpy as np
 import io
 
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
-n = neuralNetwork(784, 200, 10, 0.3)
-n.load("model_weights.npz")
+def load_model(filepath, input_nodes=784, hidden_nodes=200, output_nodes=10, learning_rate=0.3):
+    n = neuralNetwork(input_nodes, hidden_nodes, output_nodes, learning_rate)
+    n.load(filepath)
+    return n
 
 def preprocess(file_bytes):
     img = Image.open(io.BytesIO(file_bytes)).convert("L")
@@ -21,6 +21,10 @@ def preprocess(file_bytes):
 
     arr = (arr / 255.0 * 0.99) + 0.01
     return arr.flatten()
+
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+n = load_model("model_weights.npz")
 
 @app.route("/predict", methods = ["POST"])
 def predict():
